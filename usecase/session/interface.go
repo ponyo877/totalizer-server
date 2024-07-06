@@ -1,17 +1,13 @@
 package session
 
-type Reader interface {
-}
-
-type Writer interface {
-	Incriment(string) (int, error)
-}
+import "github.com/ponyo877/totalizer-server/domain"
 
 type Repository interface {
-	Writer
-	Reader
+	Incriment(string) (int, error)
+	ListQuestion() (*domain.Question, error)
 }
 
 type UseCase interface {
 	Incriment(string) (int, error)
+	ListQuestion() (*domain.Question, error)
 }

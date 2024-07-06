@@ -11,6 +11,8 @@ import (
 	"github.com/ponyo877/totalizer-server/usecase/session"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/websocket"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var (
@@ -40,6 +42,8 @@ func wsConnection(service *session.Service) func(ws *websocket.Conn) {
 				}
 				break
 			}
+			questions, _ := service.ListQuestion()
+			log.Printf("Questions: %v\n", questions)
 			value, err := service.Incriment("counter")
 			if err != nil {
 				log.Printf("Error incrementing value: %s\n", err.Error())
@@ -61,7 +65,17 @@ func main() {
 	redisToken := os.Getenv("REDIS_TOKEN")
 
 	opt, _ := redis.ParseURL(fmt.Sprintf("rediss://default:%s@%s:6379", redisToken, redisURL))
-	repository := repository.NewSessionRepository(redis.NewClient(opt))
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+	dsn := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s pgbouncer=true sslmode=require", dbUser, dbPassword, dbHost, dbPort, dbName)
+	log.Printf("dsn: %s\n", dsn)
+	db, _ := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	orgdb, _ := db.DB()
+	defer orgdb.Close()
+	repository := repository.NewSessionRepository(db, redis.NewClient(opt))
 	service := session.NewService(repository)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
