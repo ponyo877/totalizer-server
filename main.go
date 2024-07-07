@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/ponyo877/totalizer-server/repository"
+	"github.com/ponyo877/totalizer-server/socket"
 	"github.com/ponyo877/totalizer-server/usecase/session"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/websocket"
@@ -31,8 +32,9 @@ func NewResMsg(value int) *ResMsg {
 	return &ResMsg{value}
 }
 
-func wsConnection(service *session.Service) func(ws *websocket.Conn) {
+func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 	return func(ws *websocket.Conn) {
+		s := socket.NewSocket(ws, service)
 		for {
 			var req ReqMsg
 			if err := websocket.JSON.Receive(ws, &req); err != nil {
@@ -42,19 +44,41 @@ func wsConnection(service *session.Service) func(ws *websocket.Conn) {
 				}
 				break
 			}
-			questions, _ := service.ListQuestion()
-			log.Printf("Questions: %v\n", questions)
-			value, err := service.Incriment("counter")
-			if err != nil {
-				log.Printf("Error incrementing value: %s\n", err.Error())
+			switch req.Type {
+			// 開室
+			case "open":
+				s.Open("dummy")
+				return
+			// 入室
+			case "enter":
+				s.Enter("dummy")
+				return
+			// 出題
+			case "ask":
+				s.Ask("dummy", "dummy")
+				return
+			// 投票
+			case "vote":
+				s.Vote("dummy", "dummy", "dummy")
+				return
+			// 公表
+			case "release":
+				s.Release("dummy", "dummy")
+				return
 			}
-			if err = websocket.JSON.Send(ws, NewResMsg(value)); err != nil {
-				log.Printf("Send failed: %s; closing connection...", err.Error())
-				if err = ws.Close(); err != nil {
-					log.Println("Error closing connection:", err.Error())
-				}
-				break
-			}
+			// questions, _ := service.ListQuestion()
+			// log.Printf("Questions: %v\n", questions)
+			// value, err := service.Incriment("counter")
+			// if err != nil {
+			// 	log.Printf("Error incrementing value: %s\n", err.Error())
+			// }
+			// if err = websocket.JSON.Send(ws, NewResMsg(value)); err != nil {
+			// 	log.Printf("Send failed: %s; closing connection...", err.Error())
+			// 	if err = ws.Close(); err != nil {
+			// 		log.Println("Error closing connection:", err.Error())
+			// 	}
+			// 	break
+			// }
 		}
 	}
 }
@@ -70,15 +94,18 @@ func main() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbName := os.Getenv("DB_NAME")
-	dsn := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s pgbouncer=true sslmode=require", dbUser, dbPassword, dbHost, dbPort, dbName)
+	dsn := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 	log.Printf("dsn: %s\n", dsn)
-	db, _ := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, _ := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
 	orgdb, _ := db.DB()
 	defer orgdb.Close()
 	repository := repository.NewSessionRepository(db, redis.NewClient(opt))
 	service := session.NewService(repository)
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		websocket.Server{Handler: websocket.Handler(wsConnection(service))}.ServeHTTP(w, req)
 	})
 

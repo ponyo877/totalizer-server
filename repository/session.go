@@ -36,9 +36,10 @@ func (r *sessionRepository) Incriment(key string) (int, error) {
 }
 
 func (r *sessionRepository) ListQuestion() (*domain.Question, error) {
-	var question Question
-	if err := r.db.Find(&question).Error; err != nil {
+	var questions []Question
+	if err := r.db.Find(&questions).Error; err != nil {
 		return nil, err
 	}
+	question := questions[2]
 	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.Vote, question.CreateAt), nil
 }
