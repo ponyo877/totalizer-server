@@ -15,7 +15,7 @@ type UseCase interface {
 	IncEnterCount(string) (int, error)
 	RegisterQuestion(string, string) error
 	PublishQuestion(string, string) error
-	VoteAny(string) (int, error)
+	CountVote(string) (int, error)
 	FetchEnterCount(string) (int, error)
 	VoteYes(string) error
 	PublishReady(string) error

@@ -40,7 +40,7 @@ func (s *Service) PublishQuestion(roomID string, question string) error {
 	return nil
 }
 
-func (s *Service) VoteAny(roomID string) (int, error) {
+func (s *Service) CountVote(roomID string) (int, error) {
 	return 0, nil
 }
 

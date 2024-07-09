@@ -65,7 +65,7 @@ func (s *Socket) Vote(roomID string, questionID string, answer string) error {
 			return err
 		}
 	}
-	count, err := s.service.VoteAny(questionID)
+	count, err := s.service.CountVote(questionID)
 	if err != nil {
 		return err
 	}
