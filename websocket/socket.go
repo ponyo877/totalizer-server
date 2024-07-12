@@ -85,5 +85,5 @@ func (s *Socket) Release(roomID string, questionID string) error {
 	if err := s.service.SaveResult(roomID, questionID); err != nil {
 		return err
 	}
-	return s.service.PublishResult(roomID)
+	return s.service.PublishResult(roomID, questionID)
 }

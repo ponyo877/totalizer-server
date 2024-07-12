@@ -43,3 +43,47 @@ func (r *sessionRepository) ListQuestion() (*domain.Question, error) {
 	question := questions[2]
 	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.Vote, question.CreateAt), nil
 }
+
+func (r *sessionRepository) OpenRoom(string) error {
+	return nil
+}
+
+func (r *sessionRepository) SubscribeRoom(string) error {
+	return nil
+}
+
+func (r *sessionRepository) IncrimentEnterCount(string) (int, error) {
+	return 0, nil
+}
+
+func (r *sessionRepository) CreateQuestion(string, string) error {
+	return nil
+}
+
+func (r *sessionRepository) PublishQuestion(string, string) error {
+	return nil
+}
+
+func (r *sessionRepository) GetVoteCount(string) (int, error) {
+	return 0, nil
+}
+
+func (r *sessionRepository) GetEnterCount(string) (int, error) {
+	return 0, nil
+}
+
+func (r *sessionRepository) IncrimentVoteCount(string, string) error {
+	return nil
+}
+
+func (r *sessionRepository) PublishReady(string) error {
+	return nil
+}
+
+func (r *sessionRepository) PublishResult(string, string) error {
+	return nil
+}
+
+func (r *sessionRepository) UpdateQuestionVote(string, string) error {
+	return nil
+}

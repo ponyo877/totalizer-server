@@ -21,45 +21,45 @@ func (s *Service) ListQuestion() (*domain.Question, error) {
 }
 
 func (s *Service) OpenRoom(roomID string) error {
-	return nil
+	return s.repository.OpenRoom(roomID)
 }
 
 func (s *Service) Subscribe(roomID string) error {
-	return nil
+	return s.repository.SubscribeRoom(roomID)
 }
 
 func (s *Service) IncEnterCount(roomID string) (int, error) {
-	return 0, nil
+	return s.repository.IncrimentEnterCount(roomID)
 }
 
 func (s *Service) RegisterQuestion(roomID string, question string) error {
-	return nil
+	return s.repository.CreateQuestion(roomID, question)
 }
 
 func (s *Service) PublishQuestion(roomID string, question string) error {
-	return nil
+	return s.repository.PublishQuestion(roomID, question)
 }
 
 func (s *Service) CountVote(roomID string) (int, error) {
-	return 0, nil
+	return s.repository.GetVoteCount(roomID)
 }
 
 func (s *Service) FetchEnterCount(roomID string) (int, error) {
-	return 0, nil
+	return s.repository.GetEnterCount(roomID)
 }
 
 func (s *Service) VoteYes(roomID string) error {
-	return nil
+	return s.repository.IncrimentVoteCount(roomID, "YES")
 }
 
 func (s *Service) PublishReady(roomID string) error {
-	return nil
+	return s.repository.PublishReady(roomID)
 }
 
-func (s *Service) PublishResult(roomID string) error {
-	return nil
+func (s *Service) PublishResult(roomID string, question string) error {
+	return s.repository.PublishResult(roomID, question)
 }
 
 func (s *Service) SaveResult(roomID string, questionID string) error {
-	return nil
+	return s.repository.UpdateQuestionVote(roomID, questionID)
 }

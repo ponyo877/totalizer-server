@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/ponyo877/totalizer-server/repository"
-	"github.com/ponyo877/totalizer-server/socket"
 	"github.com/ponyo877/totalizer-server/usecase/session"
+	socket "github.com/ponyo877/totalizer-server/websocket"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/websocket"
 	"gorm.io/driver/postgres"
