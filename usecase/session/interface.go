@@ -3,33 +3,23 @@ package session
 import "github.com/ponyo877/totalizer-server/domain"
 
 type Repository interface {
-	Incriment(string) (int, error)
-	ListQuestion() (*domain.Question, error)
 	OpenRoom(string) error
 	SubscribeRoom(string) error
 	IncrimentEnterCount(string) (int, error)
-	CreateQuestion(string, string) error
-	PublishQuestion(string, string) error
+	CreateQuestion(*domain.Question) error
+	PublishQuestion(*domain.Question) error
 	GetVoteCount(string) (int, error)
 	GetEnterCount(string) (int, error)
-	IncrimentVoteCount(string, string) error
+	IncrimentVoteCount(string, string) (int, error)
 	PublishReady(string) error
 	PublishResult(string, string) error
-	UpdateQuestionVote(string, string) error
+	UpdateQuestionVote(string) error
 }
 
 type UseCase interface {
-	Incriment(string) (int, error)
-	ListQuestion() (*domain.Question, error)
-	OpenRoom(string) error
-	Subscribe(string) error
-	IncEnterCount(string) (int, error)
-	RegisterQuestion(string, string) error
-	PublishQuestion(string, string) error
-	CountVote(string) (int, error)
-	FetchEnterCount(string) (int, error)
-	VoteYes(string) error
-	PublishReady(string) error
-	PublishResult(string, string) error
-	SaveResult(string, string) error
+	Open(string) error
+	Enter(string) error
+	Ask(string, string) error
+	Vote(string, string, string) error
+	Release(string, string) error
 }

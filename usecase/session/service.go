@@ -1,7 +1,5 @@
 package session
 
-import "github.com/ponyo877/totalizer-server/domain"
-
 type Service struct {
 	repository Repository
 }
@@ -12,54 +10,61 @@ func NewService(r Repository) UseCase {
 	}
 }
 
-func (s *Service) Incriment(key string) (int, error) {
-	return s.repository.Incriment(key)
+func (s *Service) Open(roomID string) error {
+	if err := s.repository.OpenRoom(roomID); err != nil {
+		return err
+	}
+	if err := s.repository.SubscribeRoom(roomID); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Service) ListQuestion() (*domain.Question, error) {
-	return s.repository.ListQuestion()
+func (s *Service) Enter(roomID string) error {
+	if err := s.repository.SubscribeRoom(roomID); err != nil {
+		return err
+	}
+	if _, err := s.repository.IncrimentEnterCount(roomID); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Service) OpenRoom(roomID string) error {
-	return s.repository.OpenRoom(roomID)
+func (s *Service) Ask(roomID string, question string) error {
+	if err := s.repository.CreateQuestion(roomID, question); err != nil {
+		return err
+	}
+	if err := s.repository.PublishQuestion(roomID, question); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Service) Subscribe(roomID string) error {
-	return s.repository.SubscribeRoom(roomID)
+func (s *Service) Vote(roomID string, questionID string, answer string) error {
+	if answer == "yes" {
+		if _, err := s.repository.IncrimentVoteCount(roomID, "YES"); err != nil {
+			return err
+		}
+	}
+	count, err := s.repository.GetVoteCount(roomID)
+	if err != nil {
+		return err
+	}
+	total, err := s.repository.GetEnterCount(roomID)
+	if err != nil {
+		return err
+	}
+	if count == total {
+		if err := s.repository.PublishReady(roomID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (s *Service) IncEnterCount(roomID string) (int, error) {
-	return s.repository.IncrimentEnterCount(roomID)
-}
-
-func (s *Service) RegisterQuestion(roomID string, question string) error {
-	return s.repository.CreateQuestion(roomID, question)
-}
-
-func (s *Service) PublishQuestion(roomID string, question string) error {
-	return s.repository.PublishQuestion(roomID, question)
-}
-
-func (s *Service) CountVote(roomID string) (int, error) {
-	return s.repository.GetVoteCount(roomID)
-}
-
-func (s *Service) FetchEnterCount(roomID string) (int, error) {
-	return s.repository.GetEnterCount(roomID)
-}
-
-func (s *Service) VoteYes(roomID string) error {
-	return s.repository.IncrimentVoteCount(roomID, "YES")
-}
-
-func (s *Service) PublishReady(roomID string) error {
-	return s.repository.PublishReady(roomID)
-}
-
-func (s *Service) PublishResult(roomID string, question string) error {
-	return s.repository.PublishResult(roomID, question)
-}
-
-func (s *Service) SaveResult(roomID string, questionID string) error {
-	return s.repository.UpdateQuestionVote(roomID, questionID)
+func (s *Service) Release(roomID string, questionID string) error {
+	if err := s.repository.UpdateQuestionVote(questionID); err != nil {
+		return err
+	}
+	return s.repository.PublishResult(roomID, questionID)
 }

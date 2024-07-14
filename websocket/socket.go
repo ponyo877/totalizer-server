@@ -22,36 +22,25 @@ func (s *Socket) send(msg interface{}) error {
 	return websocket.JSON.Send(s.ws, msg)
 }
 
-func (s *Socket) receive(msg interface{}) error {
-	return websocket.JSON.Receive(s.ws, msg)
-}
-
 func (s *Socket) Open(roomID string) error {
 	mu[roomID] = &sync.Mutex{}
-	if err := s.service.OpenRoom(roomID); err != nil {
-		return err
-	}
-	if err := s.service.Subscribe(roomID); err != nil {
+	if err := s.service.Open(roomID); err != nil {
 		return err
 	}
 	return s.send("ok")
 }
 
 func (s *Socket) Enter(roomID string) error {
-	if err := s.service.Subscribe(roomID); err != nil {
-		return err
-	}
-	if _, err := s.service.IncEnterCount(roomID); err != nil {
+	mu[roomID].Lock()
+	defer mu[roomID].Unlock()
+	if err := s.service.Enter(roomID); err != nil {
 		return err
 	}
 	return s.send("ok")
 }
 
 func (s *Socket) Ask(roomID string, question string) error {
-	if err := s.service.RegisterQuestion(roomID, question); err != nil {
-		return err
-	}
-	if err := s.service.PublishQuestion(roomID, question); err != nil {
+	if err := s.service.Ask(roomID, question); err != nil {
 		return err
 	}
 	return s.send("ok")
@@ -60,30 +49,15 @@ func (s *Socket) Ask(roomID string, question string) error {
 func (s *Socket) Vote(roomID string, questionID string, answer string) error {
 	mu[roomID].Lock()
 	defer mu[roomID].Unlock()
-	if answer == "yes" {
-		if err := s.service.VoteYes(questionID); err != nil {
-			return err
-		}
-	}
-	count, err := s.service.CountVote(questionID)
-	if err != nil {
+	if err := s.service.Vote(roomID, questionID, answer); err != nil {
 		return err
-	}
-	total, err := s.service.FetchEnterCount(roomID)
-	if err != nil {
-		return err
-	}
-	if count == total {
-		if err := s.service.PublishReady(roomID); err != nil {
-			return err
-		}
 	}
 	return s.send("ok")
 }
 
 func (s *Socket) Release(roomID string, questionID string) error {
-	if err := s.service.SaveResult(roomID, questionID); err != nil {
+	if err := s.service.Release(roomID, questionID); err != nil {
 		return err
 	}
-	return s.service.PublishResult(roomID, questionID)
+	return s.send("ok")
 }
