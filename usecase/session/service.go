@@ -1,5 +1,12 @@
 package session
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/ponyo877/totalizer-server/domain"
+)
+
 type Service struct {
 	repository Repository
 }
@@ -31,10 +38,15 @@ func (s *Service) Enter(roomID string) error {
 }
 
 func (s *Service) Ask(roomID string, question string) error {
-	if err := s.repository.CreateQuestion(roomID, question); err != nil {
+	id, err := uuid.NewRandom()
+	if err != nil {
 		return err
 	}
-	if err := s.repository.PublishQuestion(roomID, question); err != nil {
+	q := domain.NewQuestion(id.String(), roomID, question, 0, time.Now())
+	if err := s.repository.CreateQuestion(q); err != nil {
+		return err
+	}
+	if err := s.repository.PublishQuestion(q); err != nil {
 		return err
 	}
 	return nil

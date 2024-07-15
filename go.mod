@@ -3,6 +3,7 @@ module github.com/ponyo877/totalizer-server
 go 1.22.2
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.5.3
 	golang.org/x/net v0.26.0
 	gorm.io/driver/postgres v1.5.9
