@@ -3,11 +3,12 @@ package socket
 import (
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/ponyo877/totalizer-server/usecase/session"
 	"golang.org/x/net/websocket"
 )
 
-var mu map[string]*sync.Mutex
+var mu = map[string]*sync.Mutex{}
 
 type Socket struct {
 	ws      *websocket.Conn
@@ -22,12 +23,17 @@ func (s *Socket) send(msg interface{}) error {
 	return websocket.JSON.Send(s.ws, msg)
 }
 
-func (s *Socket) Open(roomID string) error {
+func (s *Socket) Open() error {
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+	roomID := uuid.String()
 	mu[roomID] = &sync.Mutex{}
 	if err := s.service.Open(roomID); err != nil {
 		return err
 	}
-	return s.send("ok")
+	return s.send(roomID)
 }
 
 func (s *Socket) Enter(roomID string) error {

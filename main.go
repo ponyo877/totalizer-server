@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -28,57 +29,92 @@ type ResMsg struct {
 	Value int `json:"value"`
 }
 
+type EnterMsg struct {
+	RoomID string `json:"room_id"`
+}
+
+type AskMsg struct {
+	RoomID   string `json:"room_id"`
+	Question string `json:"question"`
+}
+
+type VoteMsg struct {
+	RoomID     string `json:"room_id"`
+	QuestionID string `json:"question_id"`
+	Answer     string `json:"answer"`
+}
+
+type ReleaseMsg struct {
+	RoomID     string `json:"room_id"`
+	QuestionID string `json:"question_id"`
+}
+
 func NewResMsg(value int) *ResMsg {
 	return &ResMsg{value}
+}
+
+func parseMsg[T any](msg []byte) (T, error) {
+	var anyMsg T
+	if err := json.Unmarshal(msg, &anyMsg); err != nil {
+		log.Printf("Unmarshal failed: %s\n", err.Error())
+		return anyMsg, err
+	}
+	return anyMsg, nil
 }
 
 func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 	return func(ws *websocket.Conn) {
 		s := socket.NewSocket(ws, service)
 		for {
-			var req ReqMsg
-			if err := websocket.JSON.Receive(ws, &req); err != nil {
+			var msg []byte
+			if err := websocket.Message.Receive(ws, &msg); err != nil {
 				log.Printf("Receive failed: %s; closing connection...", err.Error())
 				if err = ws.Close(); err != nil {
 					log.Println("Error closing connection:", err.Error())
 				}
 				break
 			}
+			var req ReqMsg
+			if err := json.Unmarshal(msg, &req); err != nil {
+				log.Printf("Unmarshal failed: %s\n", err.Error())
+			}
 			switch req.Type {
 			// 開室
 			case "open":
-				s.Open("dummy")
-				return
+				s.Open()
 			// 入室
 			case "enter":
-				s.Enter("dummy")
-				return
+				enterMsg, err := parseMsg[EnterMsg](msg)
+				if err != nil {
+					log.Printf("Message failed: %s\n", err)
+					break
+				}
+				s.Enter(enterMsg.RoomID)
 			// 出題
 			case "ask":
-				s.Ask("dummy", "dummy")
-				return
+				askMsg, err := parseMsg[AskMsg](msg)
+				if err != nil {
+					log.Printf("Message failed: %s\n", err)
+					break
+				}
+				s.Ask(askMsg.RoomID, askMsg.Question)
 			// 投票
 			case "vote":
-				s.Vote("dummy", "dummy", "dummy")
-				return
+				voteMsg, err := parseMsg[VoteMsg](msg)
+				if err != nil {
+					log.Printf("Message failed: %s\n", err)
+					break
+				}
+				s.Vote(voteMsg.RoomID, voteMsg.QuestionID, voteMsg.Answer)
 			// 公表
 			case "release":
-				s.Release("dummy", "dummy")
-				return
+				releaseMsg, err := parseMsg[ReleaseMsg](msg)
+				if err != nil {
+					log.Printf("Message failed: %s\n", err)
+					break
+				}
+				s.Release(releaseMsg.RoomID, releaseMsg.QuestionID)
 			}
-			// questions, _ := service.ListQuestion()
-			// log.Printf("Questions: %v\n", questions)
-			// value, err := service.Incriment("counter")
-			// if err != nil {
-			// 	log.Printf("Error incrementing value: %s\n", err.Error())
-			// }
-			// if err = websocket.JSON.Send(ws, NewResMsg(value)); err != nil {
-			// 	log.Printf("Send failed: %s; closing connection...", err.Error())
-			// 	if err = ws.Close(); err != nil {
-			// 		log.Println("Error closing connection:", err.Error())
-			// 	}
-			// 	break
-			// }
 		}
 	}
 }
