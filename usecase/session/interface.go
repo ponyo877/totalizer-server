@@ -3,8 +3,7 @@ package session
 import "github.com/ponyo877/totalizer-server/domain"
 
 type Repository interface {
-	OpenRoom(string) error
-	SubscribeRoom(string) error
+	SubscribeRoom(string) *chan string
 	IncrimentEnterCount(string) (int, error)
 	CreateQuestion(*domain.Question) error
 	PublishQuestion(*domain.Question) error
@@ -14,11 +13,11 @@ type Repository interface {
 	PublishReady(string) error
 	PublishResult(string, string) error
 	UpdateQuestionVote(string) error
+	PublishEnter(string) error
 }
 
 type UseCase interface {
-	Open(string) error
-	Enter(string) error
+	Enter(string) (*chan string, error)
 	Ask(string, string) error
 	Vote(string, string, string) error
 	Release(string, string) error

@@ -20,7 +20,17 @@ func NewSocket(ws *websocket.Conn, service session.UseCase) *Socket {
 }
 
 func (s *Socket) send(msg interface{}) error {
+	return websocket.Message.Send(s.ws, msg)
+}
+
+func (s *Socket) sendJSON(msg interface{}) error {
 	return websocket.JSON.Send(s.ws, msg)
+}
+
+func (s *Socket) recieve(ch *chan string) {
+	for msg := range *ch {
+		s.send(msg)
+	}
 }
 
 func (s *Socket) Open() error {
@@ -30,18 +40,22 @@ func (s *Socket) Open() error {
 	}
 	roomID := uuid.String()
 	mu[roomID] = &sync.Mutex{}
-	if err := s.service.Open(roomID); err != nil {
+	ch, err := s.service.Enter(roomID)
+	if err != nil {
 		return err
 	}
+	go s.recieve(ch)
 	return s.send(roomID)
 }
 
 func (s *Socket) Enter(roomID string) error {
 	mu[roomID].Lock()
 	defer mu[roomID].Unlock()
-	if err := s.service.Enter(roomID); err != nil {
+	ch, err := s.service.Enter(roomID)
+	if err != nil {
 		return err
 	}
+	go s.recieve(ch)
 	return s.send("ok")
 }
 

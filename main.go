@@ -62,6 +62,8 @@ func parseMsg[T any](msg []byte) (T, error) {
 	return anyMsg, nil
 }
 
+// A: Open ->       -> Ask ->      -> Vote ->
+// B:      -> Enter ->     -> Vote ->      -> Release
 func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 	return func(ws *websocket.Conn) {
 		s := socket.NewSocket(ws, service)

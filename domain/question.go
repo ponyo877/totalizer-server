@@ -30,6 +30,6 @@ func (q *Question) Vote() int {
 	return q.vote
 }
 
-func (q *Question) CreateAt() time.Time {
+func (q *Question) CreatedAt() time.Time {
 	return q.createAt
 }

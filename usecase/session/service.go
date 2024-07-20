@@ -17,24 +17,15 @@ func NewService(r Repository) UseCase {
 	}
 }
 
-func (s *Service) Open(roomID string) error {
-	if err := s.repository.OpenRoom(roomID); err != nil {
-		return err
-	}
-	if err := s.repository.SubscribeRoom(roomID); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Service) Enter(roomID string) error {
-	if err := s.repository.SubscribeRoom(roomID); err != nil {
-		return err
+func (s *Service) Enter(roomID string) (*chan string, error) {
+	ch := s.repository.SubscribeRoom(roomID)
+	if err := s.repository.PublishEnter(roomID); err != nil {
+		return nil, err
 	}
 	if _, err := s.repository.IncrimentEnterCount(roomID); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return ch, nil
 }
 
 func (s *Service) Ask(roomID string, question string) error {

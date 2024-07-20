@@ -18,11 +18,11 @@ type sessionRepository struct {
 }
 
 type Question struct {
-	ID       string    `gorm:"column:beast_id, primaryKey"`
-	RoomID   string    `gorm:"column:room_id"`
-	Content  string    `gorm:"column:room_id"`
-	Vote     int       `gorm:"column:vote"`
-	CreateAt time.Time `gorm:"column:create_at"`
+	ID        string    `gorm:"column:id"`
+	RoomID    string    `gorm:"column:room_id"`
+	Content   string    `gorm:"column:content"`
+	Vote      int       `gorm:"column:vote"`
+	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
 func (*Question) TableName() string {
@@ -44,16 +44,19 @@ func (r *sessionRepository) ListQuestion() (*domain.Question, error) {
 		return nil, err
 	}
 	question := questions[2]
-	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.Vote, question.CreateAt), nil
+	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.Vote, question.CreatedAt), nil
 }
 
-func (r *sessionRepository) OpenRoom(string) error {
-	return nil
-}
-
-func (r *sessionRepository) SubscribeRoom(roomID string) error {
+func (r *sessionRepository) SubscribeRoom(roomID string) *chan string {
 	r.sub = r.kvs.Subscribe(context.Background(), roomID)
-	return nil
+	ch := make(chan string)
+	go func() {
+		subCh := r.sub.Channel()
+		for msg := range subCh {
+			ch <- msg.Payload
+		}
+	}()
+	return &ch
 }
 
 func (r *sessionRepository) IncrimentEnterCount(roomID string) (int, error) {
@@ -64,17 +67,21 @@ func (r *sessionRepository) IncrimentEnterCount(roomID string) (int, error) {
 
 func (r *sessionRepository) CreateQuestion(question *domain.Question) error {
 	q := &Question{
-		ID:       question.ID(),
-		RoomID:   question.RoomID(),
-		Content:  question.Content(),
-		Vote:     question.Vote(),
-		CreateAt: question.CreateAt(),
+		ID:        question.ID(),
+		RoomID:    question.RoomID(),
+		Content:   question.Content(),
+		Vote:      question.Vote(),
+		CreatedAt: question.CreatedAt(),
 	}
 	return r.db.Create(q).Error
 }
 
 func (r *sessionRepository) PublishQuestion(question *domain.Question) error {
-	return r.kvs.Publish(context.Background(), question.RoomID(), question.Content()).Err()
+	ans, err := domain.NewAnswer("QUESTION", question.Content())
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), question.RoomID(), ans.String()).Err()
 }
 
 func (r *sessionRepository) GetVoteCount(question string) (int, error) {
@@ -102,7 +109,11 @@ func (r *sessionRepository) IncrimentVoteCount(roomID string, answer string) (in
 }
 
 func (r *sessionRepository) PublishReady(roomID string) error {
-	return r.kvs.Publish(context.Background(), roomID, "READY").Err()
+	ans, err := domain.NewAnswer("READY", nil)
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
 }
 
 func (r *sessionRepository) PublishResult(roomID string, questionID string) error {
@@ -110,7 +121,11 @@ func (r *sessionRepository) PublishResult(roomID string, questionID string) erro
 	if err != nil {
 		return err
 	}
-	return r.kvs.Publish(context.Background(), roomID, count).Err()
+	ans, err := domain.NewAnswer("RESULT", count)
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
 }
 
 func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
@@ -119,4 +134,16 @@ func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
 		return err
 	}
 	return r.db.Model(&Question{}).Where("id = ?", questionID).Update("vote", count).Error
+}
+
+func (r *sessionRepository) PublishEnter(roomID string) error {
+	ans, err := domain.NewAnswer("ENTER", nil)
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
+}
+
+func (r *sessionRepository) GetRoomStatus() string {
+	return ""
 }
