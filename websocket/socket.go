@@ -49,6 +49,9 @@ func (s *Socket) Open() error {
 }
 
 func (s *Socket) Enter(roomID string) error {
+	if _, ok := mu[roomID]; !ok {
+		return s.send("room not found")
+	}
 	mu[roomID].Lock()
 	defer mu[roomID].Unlock()
 	ch, err := s.service.Enter(roomID)
@@ -67,6 +70,9 @@ func (s *Socket) Ask(roomID string, question string) error {
 }
 
 func (s *Socket) Vote(roomID string, questionID string, answer string) error {
+	if _, ok := mu[roomID]; !ok {
+		return s.send("room not found")
+	}
 	mu[roomID].Lock()
 	defer mu[roomID].Unlock()
 	if err := s.service.Vote(roomID, questionID, answer); err != nil {
