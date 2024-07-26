@@ -5,13 +5,21 @@ import (
 	"errors"
 )
 
+type AnswerType int
+
+const (
+	AnswerTypeEnter AnswerType = iota
+	AnswerTypeQuestion
+	AnswerTypeReady
+	AnswerTypeResult
+)
+
 type Answer struct {
-	// ENTER, QUESION, READY, RESULT
-	answerType string
+	answerType AnswerType
 	value      interface{}
 }
 
-func NewAnswer(answerType string, value interface{}) (*Answer, error) {
+func NewAnswer(answerType AnswerType, value interface{}) (*Answer, error) {
 	ans := &Answer{answerType, value}
 	if err := ans.validation(); err != nil {
 		return nil, err
@@ -21,19 +29,19 @@ func NewAnswer(answerType string, value interface{}) (*Answer, error) {
 
 func (a *Answer) validation() error {
 	switch a.answerType {
-	case "ENTER":
+	case AnswerTypeEnter:
 		if a.value != nil {
 			return errors.New("Content is not nil")
 		}
-	case "QUESTION":
+	case AnswerTypeQuestion:
 		if _, ok := a.value.(string); !ok {
 			return errors.New("Content is not string")
 		}
-	case "READY":
+	case AnswerTypeReady:
 		if a.value != nil {
 			return errors.New("Content is not nil")
 		}
-	case "RESULT":
+	case AnswerTypeResult:
 		if _, ok := a.value.(int); !ok {
 			return errors.New("Content is not int")
 		}
@@ -43,7 +51,7 @@ func (a *Answer) validation() error {
 	return nil
 }
 
-func (a *Answer) Type() string {
+func (a *Answer) Type() AnswerType {
 	return a.answerType
 }
 
@@ -57,7 +65,7 @@ func (a *Answer) Result() int {
 
 func (a *Answer) String() string {
 	js := struct {
-		Type  string      `json:"type"`
+		Type  AnswerType  `json:"type"`
 		Value interface{} `json:"value,omitempty"`
 	}{
 		Type:  a.answerType,

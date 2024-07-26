@@ -35,6 +35,9 @@ func NewSessionRepository(db *gorm.DB, kvs *redis.Client) *sessionRepository {
 
 func (r *sessionRepository) Incriment(key string) (int, error) {
 	value, err := r.kvs.Incr(context.Background(), key).Result()
+	if err != nil {
+		return 0, err
+	}
 	return int(value), err
 }
 
@@ -62,6 +65,9 @@ func (r *sessionRepository) SubscribeRoom(roomID string) *chan string {
 func (r *sessionRepository) IncrimentEnterCount(roomID string) (int, error) {
 	key := fmt.Sprintf("room:%s:enter", roomID)
 	value, err := r.kvs.Incr(context.Background(), key).Result()
+	if err != nil {
+		return 0, err
+	}
 	return int(value), err
 }
 
@@ -77,7 +83,7 @@ func (r *sessionRepository) CreateQuestion(question *domain.Question) error {
 }
 
 func (r *sessionRepository) PublishQuestion(question *domain.Question) error {
-	ans, err := domain.NewAnswer("QUESTION", question.Content())
+	ans, err := domain.NewAnswer(domain.AnswerTypeQuestion, question.Content())
 	if err != nil {
 		return err
 	}
@@ -105,11 +111,14 @@ func (r *sessionRepository) GetEnterCount(roomID string) (int, error) {
 func (r *sessionRepository) IncrimentVoteCount(roomID string, answer string) (int, error) {
 	key := fmt.Sprintf("room:%s:vote:%s", roomID, answer)
 	value, err := r.kvs.Incr(context.Background(), key).Result()
+	if err != nil {
+		return 0, err
+	}
 	return int(value), err
 }
 
 func (r *sessionRepository) PublishReady(roomID string) error {
-	ans, err := domain.NewAnswer("READY", nil)
+	ans, err := domain.NewAnswer(domain.AnswerTypeReady, nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +130,7 @@ func (r *sessionRepository) PublishResult(roomID string, questionID string) erro
 	if err != nil {
 		return err
 	}
-	ans, err := domain.NewAnswer("RESULT", count)
+	ans, err := domain.NewAnswer(domain.AnswerTypeResult, count)
 	if err != nil {
 		return err
 	}
@@ -137,13 +146,27 @@ func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
 }
 
 func (r *sessionRepository) PublishEnter(roomID string) error {
-	ans, err := domain.NewAnswer("ENTER", nil)
+	ans, err := domain.NewAnswer(domain.AnswerTypeEnter, nil)
 	if err != nil {
 		return err
 	}
 	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
 }
 
-func (r *sessionRepository) GetRoomStatus() string {
-	return ""
+func (r *sessionRepository) StoreRoomStatus(roomID string, status domain.RoomStatus) error {
+	key := fmt.Sprintf("status:%s", roomID)
+	return r.kvs.Set(context.Background(), key, status, 0).Err()
+}
+
+func (r *sessionRepository) GetRoomStatus(roomID string) (*domain.Status, error) {
+	key := fmt.Sprintf("status:%s", roomID)
+	statusStr, err := r.kvs.Get(context.Background(), key).Result()
+	if err != nil {
+		return nil, err
+	}
+	statusInt, err := strconv.Atoi(statusStr)
+	if err != nil {
+		return nil, err
+	}
+	return domain.NewStatus(domain.RoomStatus(statusInt)), nil
 }

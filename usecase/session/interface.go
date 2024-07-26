@@ -14,6 +14,8 @@ type Repository interface {
 	PublishResult(string, string) error
 	UpdateQuestionVote(string) error
 	PublishEnter(string) error
+	StoreRoomStatus(roomID string, status domain.RoomStatus) error
+	GetRoomStatus(string) (*domain.Status, error)
 }
 
 type UseCase interface {
@@ -21,4 +23,5 @@ type UseCase interface {
 	Ask(string, string) error
 	Vote(string, string, string) error
 	Release(string, string) error
+	Sync(string) (*domain.Status, error)
 }
