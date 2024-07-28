@@ -8,6 +8,7 @@ type Repository interface {
 	CreateQuestion(*domain.Question) error
 	PublishQuestion(*domain.Question) error
 	GetVoteCount(string) (int, error)
+	GetAnswerCount(string, string) (int, error)
 	GetEnterCount(string) (int, error)
 	IncrimentVoteCount(string, string) (int, error)
 	PublishReady(string) error
@@ -16,6 +17,7 @@ type Repository interface {
 	PublishEnter(string) error
 	StoreRoomStatus(roomID string, status domain.RoomStatus) error
 	GetRoomStatus(string) (*domain.Status, error)
+	GetLatestQuestion(string) (*domain.Question, error)
 }
 
 type UseCase interface {
@@ -23,5 +25,5 @@ type UseCase interface {
 	Ask(string, string) error
 	Vote(string, string, string) error
 	Release(string, string) error
-	Sync(string) (*domain.Status, error)
+	FetchStats(roomID string) (*domain.Stats, error)
 }

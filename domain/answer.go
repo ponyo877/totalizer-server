@@ -63,7 +63,7 @@ func (a *Answer) Result() int {
 	return a.value.(int)
 }
 
-func (a *Answer) String() string {
+func (a *Answer) String() (string, error) {
 	js := struct {
 		Type  AnswerType  `json:"type"`
 		Value interface{} `json:"value,omitempty"`
@@ -71,6 +71,9 @@ func (a *Answer) String() string {
 		Type:  a.answerType,
 		Value: a.value,
 	}
-	json, _ := json.Marshal(js)
-	return string(json)
+	json, err := json.Marshal(js)
+	if err != nil {
+		return "", err
+	}
+	return string(json), nil
 }

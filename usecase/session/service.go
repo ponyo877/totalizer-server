@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,15 @@ func NewService(r Repository) UseCase {
 }
 
 func (s *Service) Enter(roomID string) (*chan string, error) {
+	status, err := s.repository.GetRoomStatus(roomID)
+	if err != nil {
+		return nil, err
+	}
+	if status == nil {
+		if err := s.repository.StoreRoomStatus(roomID, domain.StatusOpen); err != nil {
+			return nil, err
+		}
+	}
 	ch := s.repository.SubscribeRoom(roomID)
 	if err := s.repository.PublishEnter(roomID); err != nil {
 		return nil, err
@@ -25,13 +35,17 @@ func (s *Service) Enter(roomID string) (*chan string, error) {
 	if _, err := s.repository.IncrimentEnterCount(roomID); err != nil {
 		return nil, err
 	}
-	if err := s.repository.StoreRoomStatus(roomID, domain.StatusOpen); err != nil {
-		return nil, err
-	}
 	return ch, nil
 }
 
 func (s *Service) Ask(roomID string, question string) error {
+	status, err := s.repository.GetRoomStatus(roomID)
+	if err != nil {
+		return err
+	}
+	if !status.IsOpen() {
+		return errors.New("room status is invalid")
+	}
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return err
@@ -50,12 +64,19 @@ func (s *Service) Ask(roomID string, question string) error {
 }
 
 func (s *Service) Vote(roomID string, questionID string, answer string) error {
+	status, err := s.repository.GetRoomStatus(roomID)
+	if err != nil {
+		return err
+	}
+	if !status.IsQuestion() {
+		return errors.New("room status is invalid")
+	}
 	if answer == "yes" {
-		if _, err := s.repository.IncrimentVoteCount(roomID, "YES"); err != nil {
+		if _, err := s.repository.IncrimentVoteCount(questionID, "YES"); err != nil {
 			return err
 		}
 	}
-	count, err := s.repository.GetVoteCount(roomID)
+	count, err := s.repository.GetVoteCount(questionID)
 	if err != nil {
 		return err
 	}
@@ -75,6 +96,13 @@ func (s *Service) Vote(roomID string, questionID string, answer string) error {
 }
 
 func (s *Service) Release(roomID string, questionID string) error {
+	status, err := s.repository.GetRoomStatus(roomID)
+	if err != nil {
+		return err
+	}
+	if !status.IsReady() {
+		return errors.New("room status is invalid")
+	}
 	if err := s.repository.UpdateQuestionVote(questionID); err != nil {
 		return err
 	}
@@ -84,26 +112,28 @@ func (s *Service) Release(roomID string, questionID string) error {
 	return s.repository.PublishResult(roomID, questionID)
 }
 
-func (s *Service) Sync(roomID string) (*domain.Status, error) {
+func (s *Service) FetchStats(roomID string) (*domain.Stats, error) {
 	status, err := s.repository.GetRoomStatus(roomID)
 	if err != nil {
 		return nil, err
 	}
-	// 人数
-	if status.IsOpen() {
-		return nil, nil
+	var enterCount, yesCount int
+	var questionID, questionContent string
+	enterCount, err = s.repository.GetEnterCount(roomID)
+	if err != nil {
+		return nil, err
 	}
-	// 人数, 質問, 回答人数
-	if status.IsQuestion() {
-		return nil, nil
+	question, err := s.repository.GetLatestQuestion(roomID)
+	if err != nil {
+		return nil, err
 	}
-	// 人数, 質問
-	if status.IsReady() {
-		return nil, nil
+	if question != nil {
+		questionID = question.ID()
+		questionContent = question.Content()
+		yesCount, err = s.repository.GetAnswerCount(question.ID(), "YES")
+		if err != nil {
+			return nil, err
+		}
 	}
-	// 人数, 質問, 回答結果
-	if status.IsResult() {
-		return nil, nil
-	}
-	return nil, nil
+	return status.Stats(enterCount, questionID, questionContent, yesCount), nil
 }

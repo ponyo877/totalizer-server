@@ -59,7 +59,22 @@ func (s *Socket) Enter(roomID string) error {
 		return err
 	}
 	go s.recieve(ch)
-	return s.send("ok")
+	stats, err := s.service.FetchStats(roomID)
+	if err != nil {
+		return err
+	}
+	statsJSON := struct {
+		EnterCount      int    `json:"enter_count"`
+		QuestionID      string `json:"question_id"`
+		QuestionContent string `json:"question_content"`
+		YesCount        int    `json:"yes_count"`
+	}{
+		EnterCount:      stats.EnterCount(),
+		QuestionID:      stats.QuestionID(),
+		QuestionContent: stats.QuestionContent(),
+		YesCount:        stats.YesCount(),
+	}
+	return s.sendJSON(statsJSON)
 }
 
 func (s *Socket) Ask(roomID string, question string) error {

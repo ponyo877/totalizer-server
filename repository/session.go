@@ -87,12 +87,28 @@ func (r *sessionRepository) PublishQuestion(question *domain.Question) error {
 	if err != nil {
 		return err
 	}
-	return r.kvs.Publish(context.Background(), question.RoomID(), ans.String()).Err()
+	answer, err := ans.String()
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), question.RoomID(), answer).Err()
 }
 
-func (r *sessionRepository) GetVoteCount(question string) (int, error) {
-	key := fmt.Sprintf("question:%s:vote", question)
+func (r *sessionRepository) GetVoteCount(questionID string) (int, error) {
+	key := fmt.Sprintf("question:%s:vote", questionID)
 	countStr, err := r.kvs.Get(context.Background(), key).Result()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(countStr)
+}
+
+func (r *sessionRepository) GetAnswerCount(questionID string, answer string) (int, error) {
+	key := fmt.Sprintf("question:%s:vote:%s", questionID, answer)
+	countStr, err := r.kvs.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -108,10 +124,14 @@ func (r *sessionRepository) GetEnterCount(roomID string) (int, error) {
 	return strconv.Atoi(countStr)
 }
 
-func (r *sessionRepository) IncrimentVoteCount(roomID string, answer string) (int, error) {
-	key := fmt.Sprintf("room:%s:vote:%s", roomID, answer)
+func (r *sessionRepository) IncrimentVoteCount(questionID string, answer string) (int, error) {
+	key := fmt.Sprintf("question:%s:vote:%s", questionID, answer)
 	value, err := r.kvs.Incr(context.Background(), key).Result()
 	if err != nil {
+		return 0, err
+	}
+	key = fmt.Sprintf("question:%s:vote", questionID)
+	if _, err := r.kvs.Incr(context.Background(), key).Result(); err != nil {
 		return 0, err
 	}
 	return int(value), err
@@ -122,7 +142,11 @@ func (r *sessionRepository) PublishReady(roomID string) error {
 	if err != nil {
 		return err
 	}
-	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
+	answer, err := ans.String()
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, answer).Err()
 }
 
 func (r *sessionRepository) PublishResult(roomID string, questionID string) error {
@@ -134,7 +158,11 @@ func (r *sessionRepository) PublishResult(roomID string, questionID string) erro
 	if err != nil {
 		return err
 	}
-	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
+	answer, err := ans.String()
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, answer).Err()
 }
 
 func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
@@ -150,17 +178,24 @@ func (r *sessionRepository) PublishEnter(roomID string) error {
 	if err != nil {
 		return err
 	}
-	return r.kvs.Publish(context.Background(), roomID, ans.String()).Err()
+	answer, err := ans.String()
+	if err != nil {
+		return err
+	}
+	return r.kvs.Publish(context.Background(), roomID, answer).Err()
 }
 
 func (r *sessionRepository) StoreRoomStatus(roomID string, status domain.RoomStatus) error {
 	key := fmt.Sprintf("status:%s", roomID)
-	return r.kvs.Set(context.Background(), key, status, 0).Err()
+	return r.kvs.Set(context.Background(), key, int(status), 0).Err()
 }
 
 func (r *sessionRepository) GetRoomStatus(roomID string) (*domain.Status, error) {
 	key := fmt.Sprintf("status:%s", roomID)
 	statusStr, err := r.kvs.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -169,4 +204,15 @@ func (r *sessionRepository) GetRoomStatus(roomID string) (*domain.Status, error)
 		return nil, err
 	}
 	return domain.NewStatus(domain.RoomStatus(statusInt)), nil
+}
+
+func (r *sessionRepository) GetLatestQuestion(roomID string) (*domain.Question, error) {
+	var q Question
+	if err := r.db.Where("room_id = ?", roomID).Order("created_at desc").Limit(1).Find(&q).Error; err != nil {
+		return nil, err
+	}
+	if len(q.ID) == 0 {
+		return nil, nil
+	}
+	return domain.NewQuestion(q.ID, q.RoomID, q.Content, q.Vote, q.CreatedAt), nil
 }

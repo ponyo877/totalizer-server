@@ -32,3 +32,22 @@ func (s *Status) IsReady() bool {
 func (s *Status) IsResult() bool {
 	return s.status == StatusResult
 }
+
+func (s *Status) Stats(ec int, qid, qcont string, vr int) *Stats {
+	switch s.status {
+	// 人数
+	case StatusOpen:
+		return NewStats(ec, "", "", 0)
+	// 人数, 質問
+	case StatusQuestion:
+		return NewStats(ec, qid, qcont, 0)
+	// 人数, 質問
+	case StatusReady:
+		return NewStats(ec, qid, qcont, 0)
+	// 人数, 質問, 投票結果
+	case StatusResult:
+		return NewStats(ec, qid, qcont, vr)
+	default:
+		return NewStats(0, "", "", 0)
+	}
+}
