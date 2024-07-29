@@ -64,10 +64,10 @@ func (s *Socket) Enter(roomID string) error {
 		return err
 	}
 	statsJSON := struct {
-		EnterCount      int    `json:"enter_count"`
-		QuestionID      string `json:"question_id"`
-		QuestionContent string `json:"question_content"`
-		YesCount        int    `json:"yes_count"`
+		EnterCount      int    `json:"enter_count,omitempty"`
+		QuestionID      string `json:"question_id,omitempty"`
+		QuestionContent string `json:"question_content,omitempty"`
+		YesCount        *int   `json:"yes_count,omitempty"`
 	}{
 		EnterCount:      stats.EnterCount(),
 		QuestionID:      stats.QuestionID(),

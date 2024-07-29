@@ -4,10 +4,10 @@ type Stats struct {
 	enterCount      int
 	questionID      string
 	questionContent string
-	yesCount        int
+	yesCount        *int
 }
 
-func NewStats(enterCount int, questionID, questionContent string, yesCount int) *Stats {
+func NewStats(enterCount int, questionID, questionContent string, yesCount *int) *Stats {
 	return &Stats{
 		enterCount:      enterCount,
 		questionID:      questionID,
@@ -28,6 +28,6 @@ func (s *Stats) QuestionContent() string {
 	return s.questionContent
 }
 
-func (s *Stats) YesCount() int {
+func (s *Stats) YesCount() *int {
 	return s.yesCount
 }

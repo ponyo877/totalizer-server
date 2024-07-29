@@ -83,7 +83,7 @@ func (r *sessionRepository) CreateQuestion(question *domain.Question) error {
 }
 
 func (r *sessionRepository) PublishQuestion(question *domain.Question) error {
-	ans, err := domain.NewAnswer(domain.AnswerTypeQuestion, question.Content())
+	ans, err := domain.NewAskAnswer(question.ID(), question.Content())
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (r *sessionRepository) IncrimentVoteCount(questionID string, answer string)
 }
 
 func (r *sessionRepository) PublishReady(roomID string) error {
-	ans, err := domain.NewAnswer(domain.AnswerTypeReady, nil)
+	ans, err := domain.NewReadyAnswer()
 	if err != nil {
 		return err
 	}
@@ -149,12 +149,8 @@ func (r *sessionRepository) PublishReady(roomID string) error {
 	return r.kvs.Publish(context.Background(), roomID, answer).Err()
 }
 
-func (r *sessionRepository) PublishResult(roomID string, questionID string) error {
-	count, err := r.GetVoteCount(questionID)
-	if err != nil {
-		return err
-	}
-	ans, err := domain.NewAnswer(domain.AnswerTypeResult, count)
+func (r *sessionRepository) PublishResult(roomID string, yesCount, enterCount int) error {
+	ans, err := domain.NewResultAnswer(yesCount, enterCount)
 	if err != nil {
 		return err
 	}
@@ -173,8 +169,8 @@ func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
 	return r.db.Model(&Question{}).Where("id = ?", questionID).Update("vote", count).Error
 }
 
-func (r *sessionRepository) PublishEnter(roomID string) error {
-	ans, err := domain.NewAnswer(domain.AnswerTypeEnter, nil)
+func (r *sessionRepository) PublishEnter(roomID string, enterCount int) error {
+	ans, err := domain.NewEnterAnswer(enterCount)
 	if err != nil {
 		return err
 	}

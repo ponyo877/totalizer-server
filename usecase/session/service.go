@@ -29,10 +29,11 @@ func (s *Service) Enter(roomID string) (*chan string, error) {
 		}
 	}
 	ch := s.repository.SubscribeRoom(roomID)
-	if err := s.repository.PublishEnter(roomID); err != nil {
+	enterCount, err := s.repository.IncrimentEnterCount(roomID)
+	if err != nil {
 		return nil, err
 	}
-	if _, err := s.repository.IncrimentEnterCount(roomID); err != nil {
+	if err := s.repository.PublishEnter(roomID, enterCount); err != nil {
 		return nil, err
 	}
 	return ch, nil
@@ -71,10 +72,8 @@ func (s *Service) Vote(roomID string, questionID string, answer string) error {
 	if !status.IsQuestion() {
 		return errors.New("room status is invalid")
 	}
-	if answer == "yes" {
-		if _, err := s.repository.IncrimentVoteCount(questionID, "YES"); err != nil {
-			return err
-		}
+	if _, err := s.repository.IncrimentVoteCount(questionID, answer); err != nil {
+		return err
 	}
 	count, err := s.repository.GetVoteCount(questionID)
 	if err != nil {
@@ -109,7 +108,15 @@ func (s *Service) Release(roomID string, questionID string) error {
 	if err := s.repository.StoreRoomStatus(roomID, domain.StatusResult); err != nil {
 		return err
 	}
-	return s.repository.PublishResult(roomID, questionID)
+	yesCount, err := s.repository.GetAnswerCount(questionID, "yes")
+	if err != nil {
+		return err
+	}
+	enterCount, err := s.repository.GetEnterCount(roomID)
+	if err != nil {
+		return err
+	}
+	return s.repository.PublishResult(roomID, yesCount, enterCount)
 }
 
 func (s *Service) FetchStats(roomID string) (*domain.Stats, error) {
@@ -130,7 +137,7 @@ func (s *Service) FetchStats(roomID string) (*domain.Stats, error) {
 	if question != nil {
 		questionID = question.ID()
 		questionContent = question.Content()
-		yesCount, err = s.repository.GetAnswerCount(question.ID(), "YES")
+		yesCount, err = s.repository.GetAnswerCount(question.ID(), "yes")
 		if err != nil {
 			return nil, err
 		}

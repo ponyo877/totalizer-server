@@ -12,9 +12,9 @@ type Repository interface {
 	GetEnterCount(string) (int, error)
 	IncrimentVoteCount(string, string) (int, error)
 	PublishReady(string) error
-	PublishResult(string, string) error
+	PublishResult(string, int, int) error
 	UpdateQuestionVote(string) error
-	PublishEnter(string) error
+	PublishEnter(string, int) error
 	StoreRoomStatus(roomID string, status domain.RoomStatus) error
 	GetRoomStatus(string) (*domain.Status, error)
 	GetLatestQuestion(string) (*domain.Question, error)
