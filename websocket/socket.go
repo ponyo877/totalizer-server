@@ -1,14 +1,10 @@
 package socket
 
 import (
-	"sync"
-
 	"github.com/google/uuid"
 	"github.com/ponyo877/totalizer-server/usecase/session"
 	"golang.org/x/net/websocket"
 )
-
-var mu = map[string]*sync.Mutex{}
 
 type Socket struct {
 	ws      *websocket.Conn
@@ -39,21 +35,23 @@ func (s *Socket) Open() error {
 		return err
 	}
 	roomID := uuid.String()
-	mu[roomID] = &sync.Mutex{}
+	roomNumber, err := s.service.Open(roomID)
+	if err != nil {
+		return err
+	}
 	ch, err := s.service.Enter(roomID)
 	if err != nil {
 		return err
 	}
 	go s.recieve(ch)
-	return s.send(roomID)
+	return s.send(roomNumber)
 }
 
-func (s *Socket) Enter(roomID string) error {
-	if _, ok := mu[roomID]; !ok {
-		return s.send("room not found")
+func (s *Socket) Enter(roomNumber string) error {
+	roomID, err := s.service.FetchRoomID(roomNumber)
+	if err != nil {
+		return err
 	}
-	mu[roomID].Lock()
-	defer mu[roomID].Unlock()
 	ch, err := s.service.Enter(roomID)
 	if err != nil {
 		return err
@@ -64,11 +62,13 @@ func (s *Socket) Enter(roomID string) error {
 		return err
 	}
 	statsJSON := struct {
+		RoomID          string `json:"room_id"`
 		EnterCount      int    `json:"enter_count,omitempty"`
 		QuestionID      string `json:"question_id,omitempty"`
 		QuestionContent string `json:"question_content,omitempty"`
 		YesCount        *int   `json:"yes_count,omitempty"`
 	}{
+		RoomID:          roomID,
 		EnterCount:      stats.EnterCount(),
 		QuestionID:      stats.QuestionID(),
 		QuestionContent: stats.QuestionContent(),
@@ -85,11 +85,6 @@ func (s *Socket) Ask(roomID string, question string) error {
 }
 
 func (s *Socket) Vote(roomID string, questionID string, answer string) error {
-	if _, ok := mu[roomID]; !ok {
-		return s.send("room not found")
-	}
-	mu[roomID].Lock()
-	defer mu[roomID].Unlock()
 	if err := s.service.Vote(roomID, questionID, answer); err != nil {
 		return err
 	}

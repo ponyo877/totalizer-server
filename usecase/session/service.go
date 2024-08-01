@@ -2,6 +2,8 @@ package session
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +18,34 @@ func NewService(r Repository) UseCase {
 	return &Service{
 		repository: r,
 	}
+}
+
+func (s *Service) Open(roomID string) (string, error) {
+	isNew := false
+	var ramdomNumber string
+	for !isNew {
+		ramdomNumber = fmt.Sprintf("%04d", rand.Intn(10000))
+		var err error
+		_, isNew, err = s.repository.GetRoomIDByRoomNumber(ramdomNumber)
+		if err != nil {
+			return "", err
+		}
+	}
+	if err := s.repository.SetRoomNumber(ramdomNumber, roomID); err != nil {
+		return "", err
+	}
+	return ramdomNumber, nil
+}
+
+func (s *Service) FetchRoomID(ramdomNumber string) (string, error) {
+	roomID, isNew, err := s.repository.GetRoomIDByRoomNumber(ramdomNumber)
+	if err != nil {
+		return "", err
+	}
+	if isNew {
+		return "", errors.New("room number is invalid")
+	}
+	return roomID, nil
 }
 
 func (s *Service) Enter(roomID string) (*chan string, error) {
@@ -51,7 +81,7 @@ func (s *Service) Ask(roomID string, question string) error {
 	if err != nil {
 		return err
 	}
-	q := domain.NewQuestion(id.String(), roomID, question, 0, time.Now())
+	q := domain.NewQuestion(id.String(), roomID, question, 0, 0, time.Now())
 	if err := s.repository.CreateQuestion(q); err != nil {
 		return err
 	}

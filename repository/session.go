@@ -21,7 +21,9 @@ type Question struct {
 	ID        string    `gorm:"column:id"`
 	RoomID    string    `gorm:"column:room_id"`
 	Content   string    `gorm:"column:content"`
-	Vote      int       `gorm:"column:vote"`
+	VoteCount int       `gorm:"column:vote_count"`
+	YesCount  int       `gorm:"column:yes_count"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
@@ -47,7 +49,7 @@ func (r *sessionRepository) ListQuestion() (*domain.Question, error) {
 		return nil, err
 	}
 	question := questions[2]
-	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.Vote, question.CreatedAt), nil
+	return domain.NewQuestion(question.ID, question.RoomID, question.Content, question.VoteCount, question.YesCount, question.CreatedAt), nil
 }
 
 func (r *sessionRepository) SubscribeRoom(roomID string) *chan string {
@@ -76,7 +78,8 @@ func (r *sessionRepository) CreateQuestion(question *domain.Question) error {
 		ID:        question.ID(),
 		RoomID:    question.RoomID(),
 		Content:   question.Content(),
-		Vote:      question.Vote(),
+		VoteCount: question.VoteCount(),
+		YesCount:  question.YesCount(),
 		CreatedAt: question.CreatedAt(),
 	}
 	return r.db.Create(q).Error
@@ -162,11 +165,15 @@ func (r *sessionRepository) PublishResult(roomID string, yesCount, enterCount in
 }
 
 func (r *sessionRepository) UpdateQuestionVote(questionID string) error {
-	count, err := r.GetVoteCount(questionID)
+	vc, err := r.GetVoteCount(questionID)
 	if err != nil {
 		return err
 	}
-	return r.db.Model(&Question{}).Where("id = ?", questionID).Update("vote", count).Error
+	yc, err := r.GetAnswerCount(questionID, "yes")
+	if err != nil {
+		return err
+	}
+	return r.db.Model(&Question{}).Updates(Question{ID: questionID, VoteCount: vc, YesCount: yc, UpdatedAt: time.Now()}).Error
 }
 
 func (r *sessionRepository) PublishEnter(roomID string, enterCount int) error {
@@ -210,5 +217,30 @@ func (r *sessionRepository) GetLatestQuestion(roomID string) (*domain.Question, 
 	if len(q.ID) == 0 {
 		return nil, nil
 	}
-	return domain.NewQuestion(q.ID, q.RoomID, q.Content, q.Vote, q.CreatedAt), nil
+	return domain.NewQuestion(q.ID, q.RoomID, q.Content, q.VoteCount, q.YesCount, q.CreatedAt), nil
+}
+
+func (r *sessionRepository) GetRoomIDByRoomNumber(roomNumber string) (string, bool, error) {
+	key := fmt.Sprintf("room:%s", roomNumber)
+	roomID, err := r.kvs.Get(context.Background(), key).Result()
+	switch err {
+	case nil:
+		return roomID, false, nil
+	case redis.Nil:
+		return "", true, nil
+	default:
+		return "", false, err
+	}
+}
+
+func (r *sessionRepository) SetRoomNumber(roomNumber string, roomID string) error {
+	key := fmt.Sprintf("room:%s", roomNumber)
+	_, err := r.kvs.Set(context.Background(), key, roomID, 0).Result()
+	return err
+}
+
+func (r *sessionRepository) DeleteRoomNumber(roomNumber string) error {
+	key := fmt.Sprintf("room:%s", roomNumber)
+	_, err := r.kvs.Del(context.Background(), key).Result()
+	return err
 }

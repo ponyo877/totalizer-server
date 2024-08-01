@@ -15,15 +15,20 @@ type Repository interface {
 	PublishResult(string, int, int) error
 	UpdateQuestionVote(string) error
 	PublishEnter(string, int) error
-	StoreRoomStatus(roomID string, status domain.RoomStatus) error
+	StoreRoomStatus(string, domain.RoomStatus) error
 	GetRoomStatus(string) (*domain.Status, error)
 	GetLatestQuestion(string) (*domain.Question, error)
+	GetRoomIDByRoomNumber(string) (string, bool, error)
+	SetRoomNumber(string, string) error
+	DeleteRoomNumber(string) error
 }
 
 type UseCase interface {
+	Open(string) (string, error)
 	Enter(string) (*chan string, error)
 	Ask(string, string) error
 	Vote(string, string, string) error
 	Release(string, string) error
-	FetchStats(roomID string) (*domain.Stats, error)
+	FetchStats(string) (*domain.Stats, error)
+	FetchRoomID(string) (string, error)
 }

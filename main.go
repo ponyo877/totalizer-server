@@ -30,7 +30,7 @@ type ResMsg struct {
 }
 
 type EnterMsg struct {
-	RoomID string `json:"room_id"`
+	RoomNumber string `json:"room_number"`
 }
 
 type AskMsg struct {
@@ -91,7 +91,7 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 					log.Printf("Message failed: %s\n", err)
 					break
 				}
-				s.Enter(enterMsg.RoomID)
+				s.Enter(enterMsg.RoomNumber)
 			// 出題
 			case "ask":
 				askMsg, err := parseMsg[AskMsg](msg)
