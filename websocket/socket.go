@@ -2,6 +2,7 @@ package socket
 
 import (
 	"github.com/google/uuid"
+	"github.com/ponyo877/totalizer-server/domain"
 	"github.com/ponyo877/totalizer-server/usecase/session"
 	"golang.org/x/net/websocket"
 )
@@ -44,7 +45,8 @@ func (s *Socket) Open() error {
 		return err
 	}
 	go s.recieve(ch)
-	return s.send(roomNumber)
+	answer, _ := domain.NewOpenAnswer(roomID, roomNumber)
+	return s.sendJSON(answer)
 }
 
 func (s *Socket) Enter(roomNumber string) error {
@@ -61,39 +63,33 @@ func (s *Socket) Enter(roomNumber string) error {
 	if err != nil {
 		return err
 	}
-	statsJSON := struct {
-		RoomID          string `json:"room_id"`
-		EnterCount      int    `json:"enter_count,omitempty"`
-		QuestionID      string `json:"question_id,omitempty"`
-		QuestionContent string `json:"question_content,omitempty"`
-		YesCount        *int   `json:"yes_count,omitempty"`
-	}{
-		RoomID:          roomID,
-		EnterCount:      stats.EnterCount(),
-		QuestionID:      stats.QuestionID(),
-		QuestionContent: stats.QuestionContent(),
-		YesCount:        stats.YesCount(),
-	}
-	return s.sendJSON(statsJSON)
+	answer, _ := domain.NewStatsAnswer(
+		roomID,
+		stats.EnterCount(),
+		stats.QuestionID(),
+		stats.QuestionContent(),
+		stats.YesCount(),
+	)
+	return s.sendJSON(answer)
 }
 
 func (s *Socket) Ask(roomID string, question string) error {
 	if err := s.service.Ask(roomID, question); err != nil {
 		return err
 	}
-	return s.send("ok")
+	return nil
 }
 
 func (s *Socket) Vote(roomID string, questionID string, answer string) error {
 	if err := s.service.Vote(roomID, questionID, answer); err != nil {
 		return err
 	}
-	return s.send("ok")
+	return nil
 }
 
 func (s *Socket) Release(roomID string, questionID string) error {
 	if err := s.service.Release(roomID, questionID); err != nil {
 		return err
 	}
-	return s.send("ok")
+	return nil
 }

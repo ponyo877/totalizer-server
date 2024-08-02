@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 )
 
-type AnswerType int
+type Type int
 
 const (
-	AnswerTypeEnter AnswerType = iota
-	AnswerTypeQuestion
-	AnswerTypeReady
-	AnswerTypeResult
+	TypeEnter Type = iota
+	TypeQuestion
+	TypeReady
+	TypeResult
 )
 
 type Answer interface {
@@ -25,41 +25,104 @@ func answerToString(a Answer) (string, error) {
 	return string(json), nil
 }
 
+type BaseAnswer struct {
+	Type Type   `json:"type"`
+	From string `json:"from"`
+}
+
 type EnterAnswer struct {
-	AnswerType AnswerType `json:"type"`
-	EnterCount int        `json:"enter_count"`
+	BaseAnswer
+	EnterCount int `json:"enter_count"`
 }
 
 type AskAnswer struct {
-	AnswerType      AnswerType `json:"type"`
-	QuestionID      string     `json:"question_id"`
-	QuestionContent string     `json:"question_content"`
+	BaseAnswer
+	QuestionID      string `json:"question_id"`
+	QuestionContent string `json:"question_content"`
 }
 
 type ReadyAnswer struct {
-	AnswerType AnswerType `json:"type"`
+	BaseAnswer
 }
 
 type ReleaseAnswer struct {
-	AnswerType AnswerType `json:"type"`
-	YesCount   int        `json:"yes_count"`
-	EnterCount int        `json:"enter_count"`
+	BaseAnswer
+	YesCount   int `json:"yes_count"`
+	EnterCount int `json:"enter_count"`
+}
+
+type OpenAnswer struct {
+	BaseAnswer
+	RoomID     string `json:"room_id"`
+	RoomNumber string `json:"room_number"`
+}
+
+type StatsAnswer struct {
+	BaseAnswer
+	RoomID          string `json:"room_id"`
+	EnterCount      int    `json:"enter_count,omitempty"`
+	QuestionID      string `json:"question_id,omitempty"`
+	QuestionContent string `json:"question_content,omitempty"`
+	YesCount        *int   `json:"yes_count,omitempty"`
 }
 
 func NewEnterAnswer(enterCount int) (*EnterAnswer, error) {
-	return &EnterAnswer{AnswerTypeEnter, enterCount}, nil
+	base := BaseAnswer{
+		Type: TypeEnter,
+		From: "user",
+	}
+	return &EnterAnswer{base, enterCount}, nil
 }
 
 func NewAskAnswer(quesionID, questionContent string) (*AskAnswer, error) {
-	return &AskAnswer{AnswerTypeQuestion, quesionID, questionContent}, nil
+	base := BaseAnswer{
+		Type: TypeQuestion,
+		From: "user",
+	}
+	return &AskAnswer{base, quesionID, questionContent}, nil
 }
 
 func NewReadyAnswer() (*ReadyAnswer, error) {
-	return &ReadyAnswer{AnswerTypeReady}, nil
+	base := BaseAnswer{
+		Type: TypeReady,
+		From: "user",
+	}
+	return &ReadyAnswer{base}, nil
 }
 
 func NewResultAnswer(yesCount, enterCount int) (*ReleaseAnswer, error) {
-	return &ReleaseAnswer{AnswerTypeResult, yesCount, enterCount}, nil
+	base := BaseAnswer{
+		Type: TypeResult,
+		From: "user",
+	}
+	return &ReleaseAnswer{base, yesCount, enterCount}, nil
+}
+
+func NewOpenAnswer(roomID, roomNumber string) (*OpenAnswer, error) {
+	base := BaseAnswer{
+		Type: TypeEnter,
+		From: "system",
+	}
+	return &OpenAnswer{
+		BaseAnswer: base,
+		RoomID:     roomID,
+		RoomNumber: roomNumber,
+	}, nil
+}
+
+func NewStatsAnswer(roomID string, enterCount int, questionID string, questionContent string, yesCount *int) (*StatsAnswer, error) {
+	base := BaseAnswer{
+		Type: TypeEnter,
+		From: "system",
+	}
+	return &StatsAnswer{
+		BaseAnswer:      base,
+		RoomID:          roomID,
+		EnterCount:      enterCount,
+		QuestionID:      questionID,
+		QuestionContent: questionContent,
+		YesCount:        yesCount,
+	}, nil
 }
 
 func (a *EnterAnswer) String() (string, error) {
