@@ -212,10 +212,10 @@ func (r *sessionRepository) GetRoomStatus(roomID string) (*domain.Status, error)
 func (r *sessionRepository) GetLatestQuestion(roomID string) (*domain.Question, error) {
 	var q Question
 	if err := r.db.Where("room_id = ?", roomID).Order("created_at desc").Limit(1).Find(&q).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, err
-	}
-	if len(q.ID) == 0 {
-		return nil, nil
 	}
 	return domain.NewQuestion(q.ID, q.RoomID, q.Content, q.VoteCount, q.YesCount, q.CreatedAt), nil
 }

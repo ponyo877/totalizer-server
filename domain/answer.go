@@ -7,7 +7,8 @@ import (
 type Type int
 
 const (
-	TypeEnter Type = iota
+	TypeFail Type = iota
+	TypeEnter
 	TypeQuestion
 	TypeReady
 	TypeResult
@@ -64,6 +65,10 @@ type StatsAnswer struct {
 	QuestionID      string `json:"question_id,omitempty"`
 	QuestionContent string `json:"question_content,omitempty"`
 	YesCount        *int   `json:"yes_count,omitempty"`
+}
+
+type FailAnswer struct {
+	BaseAnswer
 }
 
 func NewEnterAnswer(enterCount int) (*EnterAnswer, error) {
@@ -123,6 +128,14 @@ func NewStatsAnswer(roomID string, enterCount int, questionID string, questionCo
 		QuestionContent: questionContent,
 		YesCount:        yesCount,
 	}, nil
+}
+
+func NewFailAnswer() *FailAnswer {
+	base := BaseAnswer{
+		Type: TypeFail,
+		From: "system",
+	}
+	return &FailAnswer{base}
 }
 
 func (a *EnterAnswer) String() (string, error) {

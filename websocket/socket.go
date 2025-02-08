@@ -52,15 +52,18 @@ func (s *Socket) Open() error {
 func (s *Socket) Enter(roomNumber string) error {
 	roomID, err := s.service.FetchRoomID(roomNumber)
 	if err != nil {
+		s.sendJSON(domain.NewFailAnswer())
 		return err
 	}
 	ch, err := s.service.Enter(roomID)
 	if err != nil {
+		s.sendJSON(domain.NewFailAnswer())
 		return err
 	}
 	go s.recieve(ch)
 	stats, err := s.service.FetchStats(roomID)
 	if err != nil {
+		s.sendJSON(domain.NewFailAnswer())
 		return err
 	}
 	answer, _ := domain.NewStatsAnswer(
