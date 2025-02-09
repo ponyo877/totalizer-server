@@ -28,7 +28,7 @@ type Question struct {
 }
 
 func (*Question) TableName() string {
-	return "totalizer.question"
+	return "public.question"
 }
 
 func NewSessionRepository(db *gorm.DB, kvs *redis.Client) *sessionRepository {
