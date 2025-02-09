@@ -83,7 +83,9 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 			switch req.Type {
 			// 開室
 			case "open":
-				s.Open()
+				if err := s.Open(); err != nil {
+					log.Printf("Open failed: %s\n", err)
+				}
 			// 入室
 			case "enter":
 				enterMsg, err := parseMsg[EnterMsg](msg)
@@ -91,7 +93,9 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 					log.Printf("Message failed: %s\n", err)
 					break
 				}
-				s.Enter(enterMsg.RoomNumber)
+				if err := s.Enter(enterMsg.RoomNumber); err != nil {
+					log.Printf("Enter failed: %s\n", err)
+				}
 			// 出題
 			case "ask":
 				askMsg, err := parseMsg[AskMsg](msg)
@@ -99,7 +103,9 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 					log.Printf("Message failed: %s\n", err)
 					break
 				}
-				s.Ask(askMsg.RoomID, askMsg.Question)
+				if err := s.Ask(askMsg.RoomID, askMsg.Question); err != nil {
+					log.Printf("Ask failed: %s\n", err)
+				}
 			// 投票
 			case "vote":
 				voteMsg, err := parseMsg[VoteMsg](msg)
@@ -107,7 +113,9 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 					log.Printf("Message failed: %s\n", err)
 					break
 				}
-				s.Vote(voteMsg.RoomID, voteMsg.QuestionID, voteMsg.Answer)
+				if err := s.Vote(voteMsg.RoomID, voteMsg.QuestionID, voteMsg.Answer); err != nil {
+					log.Printf("Vote failed: %s\n", err)
+				}
 			// 公表
 			case "release":
 				releaseMsg, err := parseMsg[ReleaseMsg](msg)
@@ -115,7 +123,9 @@ func wsConnection(service session.UseCase) func(ws *websocket.Conn) {
 					log.Printf("Message failed: %s\n", err)
 					break
 				}
-				s.Release(releaseMsg.RoomID, releaseMsg.QuestionID)
+				if err := s.Release(releaseMsg.RoomID, releaseMsg.QuestionID); err != nil {
+					log.Printf("Release failed: %s\n", err)
+				}
 			}
 		}
 	}
